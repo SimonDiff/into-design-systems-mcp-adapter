@@ -1,0 +1,20 @@
+{
+  "name": "into-design-systems-cli",
+  "version": "0.1.0",
+  "description": "Portable Bun client for the public Into Design Systems jobs MCP server.",
+  "type": "module",
+  "main": "src/cli.ts",
+  "bin": {
+    "into-design-systems-search": "src/cli.ts"
+  },
+  "scripts": {
+    "start": "bun run src/cli.ts",
+    "test": "bun test --timeout 30000",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/bun": "1.3.14",
+    "typescript": "^5.4.0"
+  }
+}
