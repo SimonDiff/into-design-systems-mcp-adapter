@@ -1,15 +1,62 @@
 import { describe, expect, test } from "bun:test"
 import { daysAgoIso, normalizeSearchJob, parseMcpResponse } from "../src/helpers.js"
 
+function toolResult(text: string, isError = false): string {
+  return JSON.stringify({ jsonrpc: "2.0", result: { content: [{ type: "text", text }], isError } })
+}
+
 describe("MCP response parsing", () => {
   test("reads an SSE text-content JSON result", () => {
     const body = 'event: message\ndata: {"jsonrpc":"2.0","result":{"content":[{"type":"text","text":"{\\n  \\"total\\": 1, \\"jobs\\": []\\n}"}]}}\n\n'
     expect(parseMcpResponse(body, "text/event-stream")).toEqual({ total: 1, jobs: [] })
   })
 
+  test("treats an unknown slug as an error, not as a posting", () => {
+    // The board answers a missing slug with a *successful* result whose payload
+    // is `{ "error": ... }`. Returning that as a job would print "Untitled role"
+    // and exit 0, which /scrape reads as a real posting.
+    const body = toolResult(JSON.stringify({ error: 'No open posting with slug "nope".' }))
+    expect(() => parseMcpResponse(body)).toThrow(/No open posting with slug/)
+  })
+
+  test("reports a tool error in the server's own words", () => {
+    // isError results carry plain text, so parsing them as JSON would surface a
+    // syntax error instead of the server's explanation.
+    const body = toolResult("Input validation error: workType: expected one of remote|hybrid|onsite", true)
+    expect(() => parseMcpResponse(body)).toThrow(/expected one of remote/)
+  })
+})
+
+describe("search normalisation", () => {
   test("does not convert unknown work type or AI coverage into a fact", () => {
-    expect(normalizeSearchJob({ slug: "a-role", title: "Role", company: "Co", posted: "2026-09-01", detailUrl: "https://example.test/jobs/a-role" })).toMatchObject({
-      id: "a-role", location: null, workType: null, remote: null, aiSkills: null,
+    const job = normalizeSearchJob({
+      slug: "a-role",
+      title: "Role",
+      company: "Co",
+      posted: "2026-09-01",
+      detailUrl: "https://example.test/jobs/a-role",
+    })
+    expect(job).toMatchObject({ id: "a-role", location: null, workType: null, remote: null, aiSkills: null })
+  })
+
+  test("keeps a listing the board holds without posting text", () => {
+    // These carry no slug, so `detail` cannot read them — but title, company,
+    // location, date and apply URL are all present and worth ranking.
+    const job = normalizeSearchJob({
+      title: "Staff Product Designer, Design Systems",
+      company: "Turo",
+      city: "San Francisco",
+      country: "USA",
+      postingTextAvailable: false,
+      posted: "2026-07-11",
+      applyUrl: "https://example.test/apply/123",
+    })
+    expect(job).toMatchObject({
+      id: null,
+      detailUrl: null,
+      location: "San Francisco · USA",
+      url: "https://example.test/apply/123",
+      postingTextAvailable: false,
     })
   })
 

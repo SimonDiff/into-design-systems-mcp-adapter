@@ -1,0 +1,27 @@
+Into Design Systems MCP adapter for ai-job-search
+Copyright (c) 2026 Simon Di Fresco
+
+This product includes work adapted from ai-job-search
+(https://github.com/MadsLorentzen/ai-job-search), Copyright (c) 2026
+Mads Lorentzen, used under the MIT License.
+
+What is adapted: the portal-skill conventions and normalized record
+contract — the `search`/`detail` command pair, the `--format json|table|plain`
+flags, the `{ meta, results }` output shape, the `{ error, code }` stderr
+convention, and the SKILL.md frontmatter layout. The CLI architecture follows
+the pattern of that project's `linkedin-search` skill. The code in this
+repository is independently written.
+
+This adapter is a client of the Into Design Systems job board and its MCP
+service (https://jobs.intodesignsystems.com), built and maintained by Sil
+Bormüller. No part of that service is included in or distributed with this
+repository; the adapter only calls it over the network.
+
+The MIT License above covers this adapter and nothing else. It grants no rights
+in the Into Design Systems service, its job board, or the postings retrieved
+through it — those remain the property of Into Design Systems and the employers
+who list with it, and their use stays subject to that service's own terms.
+
+"Into Design Systems" and "ai-job-search" are used here only to name the
+projects this adapter works with. This project is not affiliated with, endorsed
+by, or sponsored by Into Design Systems, Sil Bormüller, or Mads Lorentzen.

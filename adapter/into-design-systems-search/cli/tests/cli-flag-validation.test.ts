@@ -3,9 +3,15 @@ import { join } from "path"
 
 const cli = join(import.meta.dir, "../src/cli.ts")
 
+// Every case here must be rejected during argument parsing, before any network
+// call, so the suite passes with no network access.
 async function run(args: string[]) {
-  const process = Bun.spawn(["bun", "run", cli, ...args], { stdout: "pipe", stderr: "pipe" })
-  return { code: await process.exited, stdout: await new Response(process.stdout).text(), stderr: await new Response(process.stderr).text() }
+  const child = Bun.spawn(["bun", "run", cli, ...args], { stdout: "pipe", stderr: "pipe" })
+  return {
+    code: await child.exited,
+    stdout: await new Response(child.stdout).text(),
+    stderr: await new Response(child.stderr).text(),
+  }
 }
 
 test("rejects unknown search flags before making a network call", async () => {
@@ -18,4 +24,16 @@ test("rejects a detail input that is not a board slug or detail URL", async () =
   const result = await run(["detail", "https://example.test/not-a-job"])
   expect(result.code).toBe(1)
   expect(JSON.parse(result.stderr).error).toContain("detail requires")
+})
+
+test("rejects a --before value the board would silently read as no results", async () => {
+  const result = await run(["search", "--before", "last-tuesday"])
+  expect(result.code).toBe(1)
+  expect(JSON.parse(result.stderr).error).toContain("ISO date")
+})
+
+test("rejects a work arrangement the board does not model", async () => {
+  const result = await run(["search", "--remote", "anywhere"])
+  expect(result.code).toBe(1)
+  expect(JSON.parse(result.stderr).code).toBe("BAD_ARGUMENT")
 })
