@@ -8,7 +8,7 @@ It searches design-systems, product-design, and AI-adjacent roles through the In
 
 ## What it does
 
-- Searches the Into Design Systems board with keywords, country, company, date, and result-limit filters.
+- Searches the Into Design Systems board with keyword, country, work-arrangement, date, and result-limit filters.
 - Fetches full details for a specific job URL or ID.
 - Normalizes results to the ai-job-search job-record shape.
 - Keeps job research separate from applying: it never fills forms or submits applications.
@@ -21,7 +21,7 @@ The public service is free, requires no account or API key, and is read-only. It
 - Read Sil's [MCP Design Job Board announcement](https://intodesignsystems.substack.com/p/mcp-design-job-board) and explore the [Into Design Systems job board](https://jobs.intodesignsystems.com/).
 - This adapter follows the skill and normalized-record conventions of [MadsLorentzen/ai-job-search](https://github.com/MadsLorentzen/ai-job-search).
 
-I have no affiliation with Into Design Systems or Sil Bormüller. I built this independently for my own private job-search workflow, then decided to share it in case it is useful to other designers.
+I have no affiliation with Into Design Systems or Sil Bormüller. I built this independently as an external adapter for ai-job-search; it is not a fork of ai-job-search.
 
 ## Install in ai-job-search
 
@@ -40,21 +40,16 @@ The source is intentionally visible under `adapter/` so the copy target is unamb
 
 Then search through the normal job-search workflow. In Codex, select or type the exact skill name `into-design-systems-search`; in Claude Code, invoke the same skill from the repository. Both clients use the same CLI and data contract.
 
-## Direct MCP access (optional)
+### Use a local checkout directly
 
-The adapter calls the public endpoint itself, so client-level MCP configuration is optional. If you also want the board's native tools directly in your AI client, configure this streamable-HTTP endpoint:
-
-```text
-https://jobs.intodesignsystems.com/mcp
-```
-
-For example, Codex supports:
+If both repositories are local and you want adapter changes to take effect without copying them again, link the standalone checkout into ai-job-search's normal skill-discovery directory:
 
 ```bash
-codex mcp add ids-jobs --url https://jobs.intodesignsystems.com/mcp
+ln -s /absolute/path/to/into-design-systems-mcp-adapter/adapter/into-design-systems-search \
+  /absolute/path/to/ai-job-search/.agents/skills/into-design-systems-search
 ```
 
-Follow your Claude client's MCP settings for an HTTP/streamable-HTTP server using that same URL. Direct client access and this adapter can coexist.
+This is only a local installation link. The adapter remains owned, versioned, and published by this standalone repository. ai-job-search discovers it in exactly the same place as a copied external adapter.
 
 ## Adapter commands
 
@@ -65,7 +60,7 @@ bun run src/cli.ts search --query "design systems" --country Germany --limit 10 
 bun run src/cli.ts detail "https://jobs.intodesignsystems.com/jobs/example" --format json
 ```
 
-Run `bun run src/cli.ts --help` for all flags. The skill instructions and field mapping are in [adapter/into-design-systems-search/SKILL.md](adapter/into-design-systems-search/SKILL.md) and [MCP.md](adapter/into-design-systems-search/MCP.md).
+Run `bun run src/cli.ts --help` for all flags. The skill instructions and field mapping are in [adapter/into-design-systems-search/SKILL.md](adapter/into-design-systems-search/SKILL.md) and [adapter/into-design-systems-search/url-reference.md](adapter/into-design-systems-search/url-reference.md).
 
 ## Compatibility and scope
 

@@ -1,21 +1,5 @@
 export const MCP_URL = "https://jobs.intodesignsystems.com/mcp"
 
-export interface SearchJob {
-  slug: string
-  title: string | null
-  company: string | null
-  city: string | null
-  country: string | null
-  remote: boolean | null
-  workType: "remote" | "hybrid" | "onsite" | null
-  aiSkills: boolean | null
-  postingTextAvailable: boolean | null
-  posted: string | null
-  applyUrl: string | null
-  detailUrl: string | null
-  summary: string | null
-}
-
 export interface PortalResult {
   id: string
   title: string | null
@@ -35,6 +19,13 @@ export class McpProtocolError extends Error {
   constructor(message: string, public readonly code = "MCP_PROTOCOL_ERROR") {
     super(message)
   }
+}
+
+const MAX_RETRIES = 3
+const INITIAL_RETRY_DELAY_MS = 500
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -77,23 +68,56 @@ export function parseMcpResponse(body: string, contentType = ""): unknown {
 }
 
 export async function callTool<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
-  const response = await fetch(MCP_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json, text/event-stream",
-    },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: crypto.randomUUID(),
-      method: "tools/call",
-      params: { name, arguments: args },
-    }),
-    signal: AbortSignal.timeout(20_000),
+  const requestBody = JSON.stringify({
+    jsonrpc: "2.0",
+    id: crypto.randomUUID(),
+    method: "tools/call",
+    params: { name, arguments: args },
   })
-  const body = await response.text()
-  if (!response.ok) throw new McpProtocolError(`MCP HTTP ${response.status}: ${body.slice(0, 240)}`, "MCP_HTTP_ERROR")
-  return parseMcpResponse(body, response.headers.get("content-type") ?? "") as T
+  let delay = INITIAL_RETRY_DELAY_MS
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+    let response: Response
+    try {
+      response = await fetch(MCP_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+        },
+        body: requestBody,
+        signal: AbortSignal.timeout(20_000),
+      })
+    } catch (error) {
+      throw new McpProtocolError(
+        `Could not reach Into Design Systems MCP (${error instanceof Error ? error.message : String(error)})`,
+        "MCP_NETWORK_ERROR",
+      )
+    }
+
+    if (response.status === 429 || response.status >= 500) {
+      if (attempt === MAX_RETRIES) {
+        throw new McpProtocolError(
+          `MCP HTTP ${response.status}: ${response.statusText}`,
+          "MCP_HTTP_ERROR",
+        )
+      }
+      await sleep(delay)
+      delay *= 2
+      continue
+    }
+
+    const body = await response.text()
+    if (!response.ok) {
+      throw new McpProtocolError(
+        `MCP HTTP ${response.status}: ${body.slice(0, 240)}`,
+        "MCP_HTTP_ERROR",
+      )
+    }
+    return parseMcpResponse(body, response.headers.get("content-type") ?? "") as T
+  }
+
+  throw new McpProtocolError("MCP request failed after retries", "MCP_HTTP_ERROR")
 }
 
 export function normalizeSearchJob(value: unknown): PortalResult {

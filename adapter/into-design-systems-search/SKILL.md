@@ -1,18 +1,20 @@
 ---
 name: into-design-systems-search
-description: Search the Into Design Systems MCP job board for open Design System and AI design roles, read a posting, compare hiring signals, or find learning resources.
+version: 0.1.0
+description: Search and read Into Design Systems job postings through its public MCP endpoint using the ai-job-search portal contract.
+enabled: true
 allowed-tools: Bash(bun run .agents/skills/into-design-systems-search/cli/src/cli.ts *)
 ---
 
 # Into Design Systems Search
 
 Use this source for Design System and AI design roles curated by Into Design
-Systems. The CLI is a small client for its public, read-only MCP server; it does
-not scrape the board, require an account, or submit applications.
+Systems. This is an MCP adapter for `ai-job-search`: its Bun CLI calls the
+board's public, read-only MCP server and normalises responses into the portal
+`search`/`detail` contract.
 
-The shared portal contract treats a missing `enabled` flag as enabled. To opt
-out in a local fork, add `enabled: false` to this skill's frontmatter; the code
-and protocol contract stay identical.
+The CLI is the canonical integration path so `$job-scrape` can deduplicate,
+rank, and track results consistently. Do not replace it with page scraping.
 
 ## Commands
 
@@ -24,14 +26,6 @@ bun run .agents/skills/into-design-systems-search/cli/src/cli.ts search \
 # Read one posting by slug or its Into Design Systems detail URL.
 bun run .agents/skills/into-design-systems-search/cli/src/cli.ts detail \
   pliant-senior-product-designer-design-systems-m-f-d-jysslr --format plain
-
-# Market and company context.
-bun run .agents/skills/into-design-systems-search/cli/src/cli.ts stats
-bun run .agents/skills/into-design-systems-search/cli/src/cli.ts companies --min-roles 3
-
-# Learning material for confirmed gaps only.
-bun run .agents/skills/into-design-systems-search/cli/src/cli.ts learning \
-  --skills "MCP,agentic design systems"
 ```
 
 `--remote` accepts `remote`, `hybrid`, or `onsite`. A missing work type means
@@ -52,18 +46,7 @@ use date windows when a result says it was truncated.
 
 Use `detail` before making a fit claim. Quote requirements in the posting's own
 words, preserve stated salary/currency exactly, and treat absent text, work
-arrangement, salary, or company detail as unknown. `find_learning` is for
-confirmed AI/agentic gaps only; its empty result is a valid outcome.
+arrangement, salary, or company detail as unknown.
 
-## Optional native MCP connection
-
-The CLI works without registering an MCP server. To call the board's tools
-directly inside Codex as well, run once:
-
-```bash
-codex mcp add ids-jobs --url https://jobs.intodesignsystems.com/mcp
-```
-
-Start a new Codex task afterwards so its tools load. Claude Code users can use
-the endpoint's own setup command; see [MCP.md](MCP.md). Both clients use the
-same public URL and this same CLI remains the portable `/scrape` integration.
+For transport details and field normalisation, read
+[url-reference.md](url-reference.md).

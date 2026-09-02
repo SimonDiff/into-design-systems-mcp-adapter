@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { runDetail, normalizeSlug } from "./commands/detail.js"
 import { runSearch } from "./commands/search.js"
-import { callTool, writeError } from "./helpers.js"
+import { writeError } from "./helpers.js"
 
 type FlagValue = string | boolean
 interface Flags { _: string[]; [key: string]: FlagValue | string[] }
@@ -11,9 +11,6 @@ const HELP = `into-design-systems-cli — search public Design System and AI des
 USAGE
   bun run src/cli.ts search [flags]
   bun run src/cli.ts detail <slug|detail-url> [--format json|plain]
-  bun run src/cli.ts stats [--format json|plain]
-  bun run src/cli.ts companies [--min-roles <n>] [--format json|plain]
-  bun run src/cli.ts learning --skills "MCP,agentic design systems" [--limit <n>] [--format json|plain]
 
 SEARCH FLAGS
   --query, -q <text>      Free-text title, company, or summary query.
@@ -62,9 +59,6 @@ function formatFlag(flags: Flags, tableAllowed = false): "json" | "table" | "pla
 const COMMAND_FLAGS: Record<string, Set<string>> = {
   search: new Set(["query", "country", "remote", "jobage", "limit", "format", "help", "h"]),
   detail: new Set(["format", "help", "h"]),
-  stats: new Set(["format", "help", "h"]),
-  companies: new Set(["min-roles", "format", "help", "h"]),
-  learning: new Set(["skills", "limit", "format", "help", "h"]),
 }
 
 function validateFlags(command: string, flags: Flags): void {
@@ -72,17 +66,6 @@ function validateFlags(command: string, flags: Flags): void {
   if (!allowed) return
   for (const key of Object.keys(flags)) {
     if (key !== "_" && !allowed.has(key)) throw new Error(`unknown flag --${key} for '${command}'`)
-  }
-}
-
-async function runAuxiliary(tool: string, args: Record<string, unknown>, format: "json" | "plain"): Promise<number> {
-  try {
-    const result = await callTool<unknown>(tool, args)
-    process.stdout.write(format === "plain" ? JSON.stringify(result, null, 2) + "\n" : JSON.stringify(result, null, 2) + "\n")
-    return 0
-  } catch (error) {
-    writeError(error, "MCP_TOOL_FAILED")
-    return 1
   }
 }
 
@@ -103,15 +86,6 @@ async function main(): Promise<number> {
       const slug = normalizeSlug(flags._[1] ?? "")
       if (!slug) throw new Error("detail requires an Into Design Systems job slug or detail URL")
       return runDetail({ slug, format: formatFlag(flags) as "json" | "plain" })
-    }
-    if (command === "stats") return runAuxiliary("hiring_stats", {}, formatFlag(flags) as "json" | "plain")
-    if (command === "companies") return runAuxiliary("list_companies", { minRoles: numberFlag(flags, "min-roles") }, formatFlag(flags) as "json" | "plain")
-    if (command === "learning") {
-      const skills = stringFlag(flags, "skills")?.split(",").map((skill) => skill.trim()).filter(Boolean) ?? []
-      if (!skills.length) throw new Error("learning requires --skills with one or more comma-separated confirmed gaps")
-      const limit = numberFlag(flags, "limit")
-      if (limit && limit > 15) throw new Error("--limit cannot exceed 15")
-      return runAuxiliary("find_learning", { skills, ...(limit ? { limit } : {}) }, formatFlag(flags) as "json" | "plain")
     }
     throw new Error(`unknown command '${command}'`)
   } catch (error) {

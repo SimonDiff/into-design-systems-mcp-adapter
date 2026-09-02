@@ -1,7 +1,7 @@
 {
   "name": "into-design-systems-cli",
   "version": "0.1.0",
-  "description": "Portable Bun client for the public Into Design Systems jobs MCP server.",
+  "description": "Into Design Systems MCP adapter for the ai-job-search portal contract.",
   "type": "module",
   "main": "src/cli.ts",
   "bin": {
