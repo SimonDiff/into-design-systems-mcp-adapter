@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { normalizeSlug, runDetail, type DetailOpts } from "./commands/detail.js"
 import { runSearch, type SearchOpts } from "./commands/search.js"
-import { AdapterError, writeError } from "./helpers.js"
+import { AdapterError, daysAgoIso, isCalendarDate, writeError } from "./helpers.js"
 
 type FlagValue = string | boolean
 interface Flags {
@@ -102,10 +102,20 @@ function searchOpts(flags: Flags): SearchOpts {
   }
 
   const before = stringFlag(flags, "before")
-  // The board answers an unparseable date with zero results rather than an
-  // error, which is indistinguishable from an empty board — so check it here.
-  if (before !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(before)) {
-    fail("--before must be an ISO date, e.g. 2026-08-01")
+  // The board compares dates as strings without validating them, so a bad value
+  // fails silently — either matching nothing or matching everything, depending
+  // on how it sorts. Neither is distinguishable from a real answer, so refuse
+  // anything that is not a real calendar day before calling.
+  if (before !== undefined && !isCalendarDate(before)) {
+    fail("--before must be a real ISO date, e.g. 2026-08-01")
+  }
+
+  const jobage = numberFlag(flags, "jobage")
+  if (jobage !== undefined && before) {
+    const from = daysAgoIso(jobage)
+    if (from >= before) {
+      fail(`--jobage ${jobage} starts at ${from}, on or after --before ${before}: that window is empty`)
+    }
   }
 
   const limit = numberFlag(flags, "limit", 20)!
@@ -115,7 +125,7 @@ function searchOpts(flags: Flags): SearchOpts {
     query: stringFlag(flags, "query"),
     country: stringFlag(flags, "country"),
     workType: remote as (typeof WORK_TYPES)[number] | undefined,
-    jobage: numberFlag(flags, "jobage"),
+    jobage,
     before,
     limit,
     format: formatFlag(flags, true),

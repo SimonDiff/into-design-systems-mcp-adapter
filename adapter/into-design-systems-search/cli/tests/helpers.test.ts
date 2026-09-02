@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { daysAgoIso, normalizeSearchJob, parseMcpResponse } from "../src/helpers.js"
+import { daysAgoIso, isCalendarDate, normalizeSearchJob, parseMcpResponse } from "../src/helpers.js"
 
 function toolResult(text: string, isError = false): string {
   return JSON.stringify({ jsonrpc: "2.0", result: { content: [{ type: "text", text }], isError } })
@@ -62,5 +62,25 @@ describe("search normalisation", () => {
 
   test("calculates the posting-age boundary in UTC", () => {
     expect(daysAgoIso(14, new Date("2026-09-01T12:00:00Z"))).toBe("2026-08-18")
+  })
+})
+
+describe("date guards", () => {
+  test("accepts a real calendar day", () => {
+    expect(isCalendarDate("2026-08-01")).toBe(true)
+    expect(isCalendarDate("2024-02-29")).toBe(true)
+  })
+
+  test("rejects dates the board would accept and silently mishandle", () => {
+    // The board compares these as strings, so "2026-13-45" sorts above every
+    // stored date and a postedBefore filter using it matches the whole board —
+    // a filter that looks applied but is not.
+    expect(isCalendarDate("2026-13-45")).toBe(false)
+    expect(isCalendarDate("2026-02-30")).toBe(false)
+    expect(isCalendarDate("2023-02-29")).toBe(false)
+    expect(isCalendarDate("08/01/2026")).toBe(false)
+    expect(isCalendarDate("2026-08-01T00:00:00Z")).toBe(false)
+    expect(isCalendarDate("not-a-date")).toBe(false)
+    expect(isCalendarDate("")).toBe(false)
   })
 })

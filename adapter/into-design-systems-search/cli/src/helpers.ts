@@ -178,6 +178,22 @@ export function writeError(error: unknown): void {
   process.stderr.write(JSON.stringify({ error: message, code }) + "\n")
 }
 
+/**
+ * True only for a real calendar day written as YYYY-MM-DD.
+ *
+ * The board compares these filters as strings rather than as dates and does not
+ * check their shape, so a wrong value fails silently and in whichever direction
+ * it happens to sort: `postedBefore: "2026-13-45"` is accepted and matches the
+ * entire board, while `"not-a-date"` matches nothing. Neither looks like an
+ * error, so the adapter refuses anything that is not a real date up front.
+ */
+export function isCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const parsed = new Date(`${value}T00:00:00Z`)
+  // A roundtrip catches shape-valid impossibilities like 2026-13-45 and 2026-02-30.
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+}
+
 export function daysAgoIso(days: number, now = new Date()): string {
   const date = new Date(now)
   date.setUTCDate(date.getUTCDate() - days)

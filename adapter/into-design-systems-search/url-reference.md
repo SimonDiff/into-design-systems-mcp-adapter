@@ -70,10 +70,31 @@ Errors are written to stderr as `{ "error": "…", "code": "…" }`. Codes:
 `BAD_ARGUMENT`, `MCP_TOOL_ERROR`, `MCP_HTTP_ERROR`, `MCP_NETWORK_ERROR`,
 `MCP_PROTOCOL_ERROR`, `INTERNAL_ERROR`.
 
-One case the server does not report: an unparseable `postedAfter` or
-`postedBefore` returns zero results rather than a validation error, which is
-indistinguishable from an empty board. The CLI therefore validates `--before`
-against `YYYY-MM-DD` itself before calling.
+### Date filters fail silently server-side
+
+`postedAfter` and `postedBefore` are compared as strings against the stored
+date, and the server does not validate their shape. A wrong value is therefore
+never reported as an error — it fails in whichever direction the string happens
+to sort, measured live against the board's 240 open roles:
+
+| Sent as `postedAfter` | Roles returned | Reads as |
+| --- | --- | --- |
+| `2026-08-01` | 95 | correct |
+| `not-a-date`, `2026-13-45` | 0 | an empty board |
+| `08/01/2026`, `01-08-2026`, `""` | 240 | a filter that was applied |
+| `1abc` / `3abc` | 240 / 0 | pure sort order |
+
+The silent 240 is the dangerous one: a caller asking for the last two weeks
+gets the whole board and presents months-old postings as new. A full ISO
+datetime misfires more subtly — `2026-08-01T00:00:00Z` returns 90, identical to
+asking for `2026-08-02`, because the shorter stored date sorts below it.
+
+The adapter is closed to all of this. `--jobage` is rendered by `daysAgoIso`,
+which can only emit `YYYY-MM-DD`, and `--before` must pass `isCalendarDate`,
+which roundtrips the value through `Date` so shape-valid impossibilities like
+`2026-13-45` and `2026-02-30` are refused rather than sent. A window whose
+start is on or after its end is also refused, since that too can only come back
+as a silent zero. Reported upstream; the guards stay regardless.
 
 ## Operational constraints
 
