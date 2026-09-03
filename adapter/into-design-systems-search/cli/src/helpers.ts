@@ -181,11 +181,10 @@ export function writeError(error: unknown): void {
 /**
  * True only for a real calendar day written as YYYY-MM-DD.
  *
- * The board compares these filters as strings rather than as dates and does not
- * check their shape, so a wrong value fails silently and in whichever direction
- * it happens to sort: `postedBefore: "2026-13-45"` is accepted and matches the
- * entire board, while `"not-a-date"` matches nothing. Neither looks like an
- * error, so the adapter refuses anything that is not a real date up front.
+ * The board validates these filters itself and rejects a bad one with a clear
+ * message, so this is not compensating for a server gap. It is checked here
+ * anyway to fail before the round trip and to report a local typo as
+ * BAD_ARGUMENT rather than as a server error.
  */
 export function isCalendarDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false

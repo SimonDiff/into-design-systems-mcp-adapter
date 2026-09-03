@@ -13,7 +13,7 @@ job portal (see [Tools not exposed](#tools-not-exposed)).
   `User-Agent: Mozilla/5.0 (compatible; into-design-systems-cli/1.0)`
 - JSON-RPC 2.0 over Streamable HTTP. The server may reply `text/event-stream`;
   the CLI reads the last `data:` JSON message.
-- Live verified: 2026-09-02, server protocol `2025-03-26`, server name
+- Live verified: 2026-09-03, server protocol `2025-03-26`, server name
   `into-design-systems-jobs`, version `1.0.0`.
 
 The User-Agent names the tool rather than impersonating a browser, following the
@@ -70,31 +70,29 @@ Errors are written to stderr as `{ "error": "…", "code": "…" }`. Codes:
 `BAD_ARGUMENT`, `MCP_TOOL_ERROR`, `MCP_HTTP_ERROR`, `MCP_NETWORK_ERROR`,
 `MCP_PROTOCOL_ERROR`, `INTERNAL_ERROR`.
 
-### Date filters fail silently server-side
+### Date filters
 
-`postedAfter` and `postedBefore` are compared as strings against the stored
-date, and the server does not validate their shape. A wrong value is therefore
-never reported as an error — it fails in whichever direction the string happens
-to sort, measured live against the board's 240 open roles:
+`postedAfter` and `postedBefore` take a calendar date, `YYYY-MM-DD`. A full ISO
+timestamp is accepted and read as its day. Any other format is rejected with a
+message naming the parameter and the value received, and stating that no filter
+was applied — the server's own description now puts it as "never a silently
+ignored filter".
 
-| Sent as `postedAfter` | Roles returned | Reads as |
-| --- | --- | --- |
-| `2026-08-01` | 95 | correct |
-| `not-a-date`, `2026-13-45` | 0 | an empty board |
-| `08/01/2026`, `01-08-2026`, `""` | 240 | a filter that was applied |
-| `1abc` / `3abc` | 240 / 0 | pure sort order |
+Until 2026-09-03 both were compared as strings with no format check, so a wrong
+value matched everything or nothing depending on how it sorted, and a full ISO
+timestamp shifted the window forward by a day. Reported upstream and fixed
+server-side the same day.
 
-The silent 240 is the dangerous one: a caller asking for the last two weeks
-gets the whole board and presents months-old postings as new. A full ISO
-datetime misfires more subtly — `2026-08-01T00:00:00Z` returns 90, identical to
-asking for `2026-08-02`, because the shorter stored date sorts below it.
+The adapter validates before calling regardless. `--jobage` is rendered by
+`daysAgoIso`, which can only emit `YYYY-MM-DD`, and `--before` must pass
+`isCalendarDate`, which roundtrips the value through `Date` so shape-valid
+impossibilities like `2026-13-45` and `2026-02-30` are refused locally. That
+costs no round trip and reports a typo as `BAD_ARGUMENT` rather than as a
+server error.
 
-The adapter is closed to all of this. `--jobage` is rendered by `daysAgoIso`,
-which can only emit `YYYY-MM-DD`, and `--before` must pass `isCalendarDate`,
-which roundtrips the value through `Date` so shape-valid impossibilities like
-`2026-13-45` and `2026-02-30` are refused rather than sent. A window whose
-start is on or after its end is also refused, since that too can only come back
-as a silent zero. Reported upstream; the guards stay regardless.
+One date mistake the server still does not report: a window whose start falls
+on or after its end returns zero roles without comment, which reads exactly
+like an empty board. The adapter refuses that pairing.
 
 ## Operational constraints
 

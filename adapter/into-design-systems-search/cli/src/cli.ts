@@ -102,14 +102,14 @@ function searchOpts(flags: Flags): SearchOpts {
   }
 
   const before = stringFlag(flags, "before")
-  // The board compares dates as strings without validating them, so a bad value
-  // fails silently — either matching nothing or matching everything, depending
-  // on how it sorts. Neither is distinguishable from a real answer, so refuse
-  // anything that is not a real calendar day before calling.
+  // Checked locally so a typo costs no round trip and reads as a bad argument
+  // rather than as a server error. The board rejects bad dates too.
   if (before !== undefined && !isCalendarDate(before)) {
     fail("--before must be a real ISO date, e.g. 2026-08-01")
   }
 
+  // An inverted window is the one date mistake the board does not report: it
+  // simply returns zero roles, which is indistinguishable from an empty board.
   const jobage = numberFlag(flags, "jobage")
   if (jobage !== undefined && before) {
     const from = daysAgoIso(jobage)
