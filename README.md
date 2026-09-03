@@ -66,6 +66,12 @@ The source is intentionally visible under `adapter/` so the copy target is unamb
 
 `/scrape` auto-discovers it from there — nothing to register or wire up. In Codex, select or type the exact skill name `into-design-systems-search`; in Claude Code, invoke the same skill from the repository. Both clients use the same CLI and data contract. Set `enabled: false` in `SKILL.md` to keep it installed but have `/scrape` skip it.
 
+**Expect one permission prompt the first time.** Since [ai-job-search#396](https://github.com/MadsLorentzen/ai-job-search/pull/396), upstream's `.claude/settings.json` pre-approves only the six portal CLIs it ships, so a borrowed skill is not on that list. That is the intended behaviour for any borrowed portal — the prompt is the point — and approving it once is enough. To skip it entirely, add this line to `permissions.allow` in the target repository's `.claude/settings.json`:
+
+```text
+Bash(bun run .agents/skills/into-design-systems-search/cli/src/cli.ts:*)
+```
+
 ### Use a local checkout directly
 
 If both repositories are local and you want adapter changes to take effect without copying them again, link the standalone checkout into ai-job-search's normal skill-discovery directory:
@@ -76,6 +82,8 @@ ln -s /absolute/path/to/into-design-systems-mcp-adapter/adapter/into-design-syst
 ```
 
 This is only a local installation link. The adapter remains owned, versioned, and published by this standalone repository. ai-job-search discovers it in exactly the same place as a copied external adapter.
+
+On Windows this will not work as written — symlink creation needs Developer Mode or an elevated shell, and `ln -s` is not available in `cmd` or PowerShell. Use the plain copy above instead and re-copy after changes.
 
 ## Adapter commands
 
@@ -96,6 +104,14 @@ Run `bun run src/cli.ts --help` for all flags. The board has no offset paging, s
 - AI clients: Codex and Claude Code, through one portable skill and CLI.
 - Scope: a **specialization** board, not a national one. Into Design Systems curates Design System roles worldwide, so use `--country` to narrow it to a market rather than expecting it to cover one.
 - No browser scraping, authentication, automatic form filling, or automatic submission.
+
+Three deliberate deviations from the portal-skill contract, all detailed in [url-reference.md](adapter/into-design-systems-search/url-reference.md):
+
+| Deviation | Why |
+| --- | --- |
+| No `--page`; `meta.page` is always `1` | The board has no offset paging. Narrow a truncated search with `--jobage` and `--before` instead. |
+| Some results have `id: null` | Listings held without posting text carry no slug, so `detail` cannot read them. They are returned rather than dropped, and `meta.withoutDetail` counts them. |
+| 3 retries, not the contract's ~6 | Failing fast beats making someone wait inside a multi-portal `/scrape` run. |
 
 ## Credits
 
