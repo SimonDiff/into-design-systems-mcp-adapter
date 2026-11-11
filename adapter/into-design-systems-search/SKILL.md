@@ -42,6 +42,22 @@ bun run .agents/skills/into-design-systems-search/cli/src/cli.ts detail \
   gitlab-senior-product-designer-ai-dtkb4g --format plain
 ```
 
+Query syntax: one case-insensitive substring matched against title, company and
+summary. Phrase quoting is not honoured — quote characters are matched literally.
+No boolean operators, no negation, no wildcards, and no word-boundary matching, so
+a multi-word query matches only as one contiguous run and word order matters:
+`design tokens` returns 48 roles, `tokens design` returns none. Send one phrase in
+the order a posting would write it, and use separate searches instead of `OR`.
+
+## Access and terms
+
+The board publishes this MCP server as its documented interface for agents, free,
+keyless and read-only, and announces it on the board's own homepage. The adapter
+calls only that endpoint. It does not fetch, parse, or crawl any board page, so no
+`robots.txt` path is involved, and there is no scraping workaround to review. The
+listings themselves stay the property of Into Design Systems and the employers who
+post them; use them accordingly.
+
 ### Examples
 
 ```bash

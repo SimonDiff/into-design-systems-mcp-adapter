@@ -124,3 +124,17 @@ conference sessions that teach a named missing skill, which lines up closely
 with this framework's `/upskill` command. Wiring it in would mean adding a third
 command outside the portal contract, so it is deliberately left out of this
 adapter rather than considered irrelevant.
+
+## Credit and affiliation
+
+The Into Design Systems job board and the MCP server this adapter calls are
+built and maintained by [Sil Bormüller](https://github.com/silships), founder of
+Into Design Systems, who publishes the endpoint as the board's documented
+interface for agents. The board's availability, curation, and result quality are
+theirs; this adapter is only a client of it.
+
+This adapter was written by [Simon Di Fresco](https://github.com/SimonDiff). It
+is not affiliated with, endorsed by, or sponsored by Into Design Systems or Sil
+Bormüller. No part of that service is included or redistributed here — the
+adapter only calls it over the network, and the listings it returns remain the
+property of Into Design Systems and the employers who post them.
